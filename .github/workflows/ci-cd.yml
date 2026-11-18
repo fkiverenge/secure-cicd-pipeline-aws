@@ -34,7 +34,7 @@ jobs:
 
       # Report only. The demo security group is open on purpose, so this does not fail the build.
       - name: Scan Dockerfile and Terraform config (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
@@ -50,7 +50,7 @@ jobs:
 
       # This step fails the build if the image has fixable HIGH or CRITICAL vulnerabilities
       - name: Scan image for vulnerabilities (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           severity: HIGH,CRITICAL
