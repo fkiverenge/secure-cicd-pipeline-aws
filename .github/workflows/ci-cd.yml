@@ -43,7 +43,7 @@ jobs:
 
       - name: Build image
         run: |
-          docker build \
+          docker build --pull\
             --build-arg GIT_SHA=${{ github.sha }} \
             -t "$ECR_REPOSITORY:${{ github.sha }}" \
             ./app
