@@ -1,0 +1,5 @@
+# Copy this file to terraform.tfvars and use your own values
+
+aws_region  = "eu-west-1"
+app_name    = "secure-cicd"
+github_repo = "your-github-username/secure-cicd-pipeline-aws"
