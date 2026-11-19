@@ -18,6 +18,7 @@ const server = http.createServer((req, res) => {
   <h1>Secure CI/CD pipeline demo</h1>
   <p>This container was built, scanned and deployed to Amazon ECS by GitHub Actions.</p>
   <p>Version (git commit): <code>${VERSION}</code></p>
+  <p>Enjoy!</p>
 </body>
 </html>`);
 });

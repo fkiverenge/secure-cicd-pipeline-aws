@@ -11,6 +11,15 @@ data "aws_subnets" "default" {
     values = [data.aws_vpc.default.id]
   }
 }
+data "http" "github_repository" {
+  url = "https://api.github.com/repos/${var.github_repo}"
+
+  request_headers = {
+    Accept     = "application/vnd.github+json"
+    User-Agent = "terraform-secure-cicd"
+  }
+}
+
 
 # ---------------------------------------------------------------------------
 # Container registry
@@ -153,9 +162,14 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 
+#locals {
+#  oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+#}
+
 locals {
-  oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-}
+  github_repository_data = jsondecode(data.http.github_repository.response_body)
+
+  github_oidc_subject = "repo:${split("/", var.github_repo)[0]}@${local.github_repository_data.owner.id}/${split("/", var.github_repo)[1]}@${local.github_repository_data.id}:ref:refs/heads/main}
 
 data "aws_iam_policy_document" "github_assume" {
   statement {
@@ -176,7 +190,7 @@ data "aws_iam_policy_document" "github_assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+      values   = [local.github_oidc_subject]
     }
   }
 }
