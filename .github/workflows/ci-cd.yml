@@ -57,6 +57,35 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Diagnose GitHub OIDC token
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+        run: |
+          set -e
+
+          TOKEN_RESPONSE=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+
+          TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.value')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to obtain GitHub OIDC token"
+            exit 1
+          fi
+
+          python3 -c '
+          import sys, json, base64
+          token = sys.argv[1]
+          payload = token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+          for key in ["iss", "aud", "sub", "repository", "ref", "environment"]:
+              print(f"{key}: {claims.get(key)}")
+          ' "$TOKEN"
+
       # Everything below runs only on pushes to main, never on pull requests
       - name: Configure AWS credentials (OIDC)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
