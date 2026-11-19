@@ -155,6 +155,7 @@ resource "aws_ecs_service" "app" {
 # ---------------------------------------------------------------------------
 # GitHub Actions access to AWS using OIDC (no stored access keys)
 # ---------------------------------------------------------------------------
+
 resource "aws_iam_openid_connect_provider" "github" {
   count = var.create_github_oidc_provider ? 1 : 0
 
@@ -162,14 +163,16 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 
-#locals {
-#  oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-#}
-
 locals {
+  # Dynamically determine the OIDC provider ARN
+  oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+
+  # Retrieve GitHub repository information
   github_repository_data = jsondecode(data.http.github_repository.response_body)
 
-  github_oidc_subject = "repo:${split("/", var.github_repo)[0]}@${local.github_repository_data.owner.id}/${split("/", var.github_repo)[1]}@${local.github_repository_data.id}:ref:refs/heads/main}
+  # Generate the GitHub OIDC subject dynamically
+  github_oidc_subject = "repo:${split("/", var.github_repo)[0]}@${local.github_repository_data.owner.id}/${split("/", var.github_repo)[1]}@${local.github_repository_data.id}:ref:refs/heads/main"
+}
 
 data "aws_iam_policy_document" "github_assume" {
   statement {
@@ -186,7 +189,6 @@ data "aws_iam_policy_document" "github_assume" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Only the main branch of this one repository can assume the role
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
